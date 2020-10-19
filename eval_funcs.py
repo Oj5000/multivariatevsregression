@@ -134,6 +134,11 @@ def eval_multivariate(data, columns, name, runs):
     print("TP: " + str(np.mean(fith_p_tp)) + "+-" + str(np.std(fith_p_tp)) + " FP: " + str(np.mean(fith_p_fp)) + "+-" + str(np.std(fith_p_fp)) + " FN: " + str(np.mean(fith_p_fn)) + "+-" + str(np.std(fith_p_fn)))
     print("Mean fp for all tp: " + str(np.mean(fps)) + " +- " + str(np.std(fps)))
 
+    t1_results = {'tp' : "%.2f +- %.2f" % (np.mean(fith_p_tp), np.std(fith_p_tp)), 'fp' : "%.2f +- %.2f" % (np.mean(fith_p_fp), np.std(fith_p_fp)), 'fn' : "%.2f +- %.2f" % (np.mean(fith_p_fn), np.std(fith_p_fn)) }
+    t2_results = "%.2f +- %.2f" % (np.mean(fps), np.std(fps))
+
+    return t1_results, t2_results
+
 def multivariate_2(data, columns):
     # Second try using NM idea
     t = np.zeros(np.shape(data), dtype=float)
@@ -231,6 +236,9 @@ def regression_err(data, columns, name, runs):
     plt.ylabel('True positives')
     plt.xlabel('False positives')
 
+    low_fp = 1e10
+    best_col = None
+
     for col in columns:
         print(col)
         print("TP: " + str(np.mean(fith_p[col]["TP"])) + "+-" + str(np.std(fith_p[col]["TP"])) + " FP: " + str(np.mean(fith_p[col]["FP"])) + "+-" + str(np.std(fith_p[col]["FP"])) + " FN: " + str(np.mean(fith_p[col]["FN"])) + "+-" + str(np.std(fith_p[col]["FN"])))
@@ -251,9 +259,15 @@ def regression_err(data, columns, name, runs):
                 best_idx = i
 
         plt.scatter(fith_p[col]["FP"][best_idx], fith_p[col]["TP"][best_idx], label=col)
+
+        if np.mean(fith_p[col]["FP"]) < low_fp:
+            low_fp = np.mean(fith_p[col]["FP"])
+            best_col = col
     
     f.legend()
     f.savefig("Results/" + name+"_regression_error.pdf", bbox_inches='tight')
 
     for c in fps:
         print(c, np.mean(fps[c]), "+-", np.std(fps[c]))
+
+    return {"c" : best_col, "tp": "%.2f +- %.2f " % (np.mean(fith_p[best_col]['TP']), np.std(fith_p[best_col]['TP'])), "fp" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FP']), np.std(fith_p[best_col]['FP'])), "fn" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FN']), np.std(fith_p[best_col]['FN']))}
