@@ -267,7 +267,16 @@ def regression_err(data, columns, name, runs):
     f.legend()
     f.savefig("Results/" + name+"_regression_error.pdf", bbox_inches='tight')
 
+    best_fps = 10e10
+    best_c = None
     for c in fps:
+        if np.mean(fps[c]) < best_fps:
+            best_fps = np.mean(fps[c])
+            best_c = c
+
         print(c, np.mean(fps[c]), "+-", np.std(fps[c]))
 
-    return {"c" : best_col, "tp": "%.2f +- %.2f " % (np.mean(fith_p[best_col]['TP']), np.std(fith_p[best_col]['TP'])), "fp" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FP']), np.std(fith_p[best_col]['FP'])), "fn" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FN']), np.std(fith_p[best_col]['FN']))}
+    t1_results = {"c" : best_col, "tp": "%.2f +- %.2f " % (np.mean(fith_p[best_col]['TP']), np.std(fith_p[best_col]['TP'])), "fp" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FP']), np.std(fith_p[best_col]['FP'])), "fn" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FN']), np.std(fith_p[best_col]['FN']))}
+    t2_results = {"c" : best_c, "fp" : "%.2f +- %.2f " % (np.mean(fps[best_c]), np.std(fps[best_c]))}
+    
+    return t1_results, t2_results

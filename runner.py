@@ -14,7 +14,7 @@ from Fertility import Fertility
 from Wine import Wine
 
 runs = 20
-datasets = [Ecoli(), Thyroid()]#, Yeast(), Wisconsin(), Shuttle(), Parkinsons(), Secom(), Fertility(), Wine()]
+datasets = [Ecoli(), Thyroid(), Yeast(), Wisconsin(), Shuttle(), Parkinsons(), Secom(), Fertility(), Wine()]
 
 table1 = {
     'Target Feature' : [],
@@ -24,8 +24,6 @@ table1 = {
 }
 
 table2 = {
-    'Dataset' : [],
-    'Method' : [],
     'Target Feature' : [],
     'False Positives' : []
 }
@@ -42,7 +40,7 @@ for dataset in datasets:
     data, columns = dataset.get_data()
     
     t1results, t2results = eval_multivariate(data, columns, name, runs)
-    t1r = regression_err(data, columns, name, runs)
+    t1r, t2r = regression_err(data, columns, name, runs)
 
     table1['Target Feature'].append("")
     table1['Outliers Detected'].append(t1results['tp'])
@@ -54,6 +52,14 @@ for dataset in datasets:
     table1['Outliers Missed'].append(t1r['fn'])
     table1['False Positives'].append(t1r['fp'])
 
+    table2['Target Feature'].append("")
+    table2['False Positives'].append(t2results)
+
+    table2['Target Feature'].append(t2r['c'])
+    table2['False Positives'].append(t2r['fp'])
+
 df1 = pd.DataFrame(table1, index=pd.MultiIndex.from_tuples(midx, names=['Dataset', 'Method']))
+df2 = pd.DataFrame(table2, index=pd.MultiIndex.from_tuples(midx, names=['Dataset', 'Method']))
 
 print(df1.to_latex(index=True, multirow = True))
+print(df2.to_latex(index=True, multirow = True))
