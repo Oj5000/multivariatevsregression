@@ -45,7 +45,7 @@ for dataset in datasets:
     table1['Target Feature'].append("")
     table1['Outliers Detected'].append(t1results['tp'])
     table1['Outliers Missed'].append(t1results['fn'])
-    table1['False Positives'].append(t1results['tp'])
+    table1['False Positives'].append(t1results['fp'])
 
     table1['Target Feature'].append(t1r['c'])
     table1['Outliers Detected'].append(t1r['tp'])
