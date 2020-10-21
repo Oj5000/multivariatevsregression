@@ -19,6 +19,7 @@ def preprocess(data, columns):
 
     for col in columns:
         if len(pd.unique(data[col])) == 1:
+            print("Removing field %s - values all the same")
             del_fields.append(col)
 
     data2 = data.drop(columns = del_fields)
@@ -36,6 +37,7 @@ def preprocess(data, columns):
 
     for col in columns2:
         if len(pd.unique(data2[col])) == 1:
+            print("Removing field %s - values all the same")
             del_fields.append(col)
 
     data2 = data2.drop(columns = del_fields)
@@ -46,7 +48,6 @@ def preprocess(data, columns):
     return data2, columns2
 
 def eval_multivariate(data, columns, name, runs):
-    print()
     print("Multivariate analysis")
 
     target = data[data['class'] == 1.0]
@@ -73,7 +74,6 @@ def eval_multivariate(data, columns, name, runs):
             predictions = dens_u.pdf(data2[columns2])
             sorted_p = np.sort(predictions)
         except:
-        #if (np.var(sorted_p) == 0.0) | (np.isnan(sorted_p).any()):
             print("statsmodels multivariate did not work, using method 2")
             predictions = multivariate_2(data2, columns2)    
         
@@ -114,7 +114,7 @@ def eval_multivariate(data, columns, name, runs):
         found = False
         for percentile in range(0, 101, 1):
             perc = np.percentile(res['pdf'], percentile)
-            idxs = res[res['pdf'] < perc].index
+            idxs = res[res['pdf'] <= perc].index
 
             tp = sum(data2['class'].iloc[idxs])
             fp = len(data2.iloc[idxs]) - sum(data2['class'].iloc[idxs])
@@ -226,13 +226,16 @@ def regression_err(data, columns, name, runs):
                 tmp = fps[col]
                 tmp.append(min_fp)
                 fps[col] = tmp
+            else:
+                tmp = fps[col]
+                tmp.append(len(d_train) - sum(d_train['class']))
+                fps[col] = tmp
 
     print("Plotting results and saving as %s_regression_error.pdf" % name)
     f = plt.figure()
     plt.title(name+": Regression error PDF")
     plt.ylabel('PDF')
-    #plt.xlabel('False positives')
-
+    
     low_fp = 1e10
     best_col = None
     best_i = 0
@@ -256,13 +259,13 @@ def regression_err(data, columns, name, runs):
                 best_f1 = f1
                 best_idx = i
 
-        #plt.scatter(fith_p[col]["FP"][best_idx], fith_p[col]["TP"][best_idx], label=col)
-
-        if np.mean(fith_p[col]["FP"]) < low_fp:
+        # Avoid situation where the model doesn't alert on anything and we later want to plot the PDF of this which doesn't exist
+        if (np.mean(fith_p[col]["FP"]) < low_fp) & ((np.mean(fith_p[col]["FP"]) != 0) & (np.mean(fith_p[col]["TP"]) != 0) & (np.mean(fith_p[col]["FN"]) != 0)):
             low_fp = np.mean(fith_p[col]["FP"])
             best_col = col
             best_i = best_idx
 
+    print(best_col, len(fith_p[best_col]["PDF"]), best_i)
     plt.plot(range(0, len(fith_p[best_col]["PDF"][best_i])), np.sort(fith_p[best_col]["PDF"][best_i]), label=col)
 
     f.legend()
@@ -270,12 +273,14 @@ def regression_err(data, columns, name, runs):
 
     best_fps = 10e10
     best_c = None
-    for c in fps:
-        if np.mean(fps[c]) < best_fps:
-            best_fps = np.mean(fps[c])
-            best_c = c
 
-        print(c, np.mean(fps[c]), "+-", np.std(fps[c]))
+    for c in columns:
+        if len(fps[c]) > 0:
+            if np.mean(fps[c]) < best_fps:
+                best_fps = np.mean(fps[c])
+                best_c = c
+
+            print(c, np.mean(fps[c]), "+-", np.std(fps[c]))
 
     t1_results = {"c" : best_col, "tp": "%.2f +- %.2f " % (np.mean(fith_p[best_col]['TP']), np.std(fith_p[best_col]['TP'])), "fp" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FP']), np.std(fith_p[best_col]['FP'])), "fn" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FN']), np.std(fith_p[best_col]['FN']))}
     t2_results = {"c" : best_c, "fp" : "%.2f +- %.2f " % (np.mean(fps[best_c]), np.std(fps[best_c]))}

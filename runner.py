@@ -13,7 +13,7 @@ from Secom import Secom
 from Fertility import Fertility
 from Wine import Wine
 
-runs = 20
+runs = 200
 datasets = [Ecoli(), Thyroid(), Yeast(), Wisconsin(), Shuttle(), Parkinsons(), Secom(), Fertility(), Wine()]
 
 table1 = {
