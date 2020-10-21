@@ -19,7 +19,7 @@ def preprocess(data, columns):
 
     for col in columns:
         if len(pd.unique(data[col])) == 1:
-            print("Removing field %s - values all the same")
+            print("Removing field %s - values all the same" % col)
             del_fields.append(col)
 
     data2 = data.drop(columns = del_fields)
@@ -37,7 +37,7 @@ def preprocess(data, columns):
 
     for col in columns2:
         if len(pd.unique(data2[col])) == 1:
-            print("Removing field %s - values all the same")
+            print("Removing field %s - values all the same" % col)
             del_fields.append(col)
 
     data2 = data2.drop(columns = del_fields)
@@ -235,7 +235,7 @@ def regression_err(data, columns, name, runs):
     f = plt.figure()
     plt.title(name+": Regression error PDF")
     plt.ylabel('PDF')
-    
+
     low_fp = 1e10
     best_col = None
     best_i = 0
