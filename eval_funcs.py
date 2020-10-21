@@ -166,7 +166,7 @@ def regression_err(data, columns, name, runs):
         fith_p_tp = np.zeros(runs)
         fith_p_fp = np.zeros(runs)
         fith_p_fn = np.zeros(runs)
-        fith_p[col] = {"TP" : fith_p_tp, "FP": fith_p_fp, "FN": fith_p_fn}
+        fith_p[col] = {"TP" : fith_p_tp, "FP": fith_p_fp, "FN": fith_p_fn, "PDF": []}
 
     for run in range(0, runs):
         # design training data using a random sample of outliers
@@ -192,10 +192,6 @@ def regression_err(data, columns, name, runs):
             e = p_x - d_train[target_f].values
 
             td = stats.gaussian_kde(e)
-            
-            p_x = model.predict(d_train[features])
-            e = p_x - d_train[target_f].values
-
             pdfs = td.pdf(e)
 
             res = pd.DataFrame.from_dict({"pdf": pdfs})
@@ -206,11 +202,11 @@ def regression_err(data, columns, name, runs):
 
             for percentile in range(0, 101, 1):
                 perc = np.percentile(res['pdf'], percentile)
-                idxs = res[res['pdf'] < perc].index
+                idxs = res[res['pdf'] <= perc].index
 
                 tp = sum(d_train['class'].loc[idxs])
-                fp = len(d_train.loc[idxs]) - sum(d_train['class'].loc[idxs])
-                fn = sum(d_train['class']) - sum(d_train['class'].loc[idxs])    
+                fp = len(idxs) - tp
+                fn = sum(d_train['class']) - tp    
 
                 if tp == sum(d_train['class']):
                     found = True
@@ -223,6 +219,7 @@ def regression_err(data, columns, name, runs):
                     fithp["TP"][run] = tp
                     fithp["FP"][run] = fp
                     fithp["FN"][run] = fn
+                    fithp["PDF"].append(pdfs)
                     fith_p[col] = fithp
 
             if found:
@@ -232,12 +229,13 @@ def regression_err(data, columns, name, runs):
 
     print("Plotting results and saving as %s_regression_error.pdf" % name)
     f = plt.figure()
-    plt.title(name+": Regression error")
-    plt.ylabel('True positives')
-    plt.xlabel('False positives')
+    plt.title(name+": Regression error PDF")
+    plt.ylabel('PDF')
+    #plt.xlabel('False positives')
 
     low_fp = 1e10
     best_col = None
+    best_i = 0
 
     for col in columns:
         print(col)
@@ -258,12 +256,15 @@ def regression_err(data, columns, name, runs):
                 best_f1 = f1
                 best_idx = i
 
-        plt.scatter(fith_p[col]["FP"][best_idx], fith_p[col]["TP"][best_idx], label=col)
+        #plt.scatter(fith_p[col]["FP"][best_idx], fith_p[col]["TP"][best_idx], label=col)
 
         if np.mean(fith_p[col]["FP"]) < low_fp:
             low_fp = np.mean(fith_p[col]["FP"])
             best_col = col
-    
+            best_i = best_idx
+
+    plt.plot(range(0, len(fith_p[best_col]["PDF"][best_i])), np.sort(fith_p[best_col]["PDF"][best_i]), label=col)
+
     f.legend()
     f.savefig("Results/" + name+"_regression_error.pdf", bbox_inches='tight')
 
