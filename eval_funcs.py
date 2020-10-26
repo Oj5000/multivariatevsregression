@@ -60,7 +60,7 @@ def eval_multivariate(data, columns, name, runs):
     for run in range(0, runs):
         # design training data using a random sample of outliers
         data2 = data[data['class'] == 0.0]
-        target_sample = target.sample(n= int(len(target) * 0.75), replace=True)
+        target_sample = target.sample(n= int(len(target) * 0.75), replace=False, random_state=np.random.RandomState(seed=None))
         data2 = data2.append(target_sample)
 
         data2, columns2 = preprocess(data2, columns)
@@ -68,11 +68,9 @@ def eval_multivariate(data, columns, name, runs):
         v_type = ""
         for i in range(0, len(columns2)):
             v_type += 'c'
-        
         try:
             dens_u = sm.nonparametric.KDEMultivariate(data=data2[columns2], var_type=v_type, bw='normal_reference')
             predictions = dens_u.pdf(data2[columns2])
-            sorted_p = np.sort(predictions)
         except:
             print("statsmodels multivariate did not work, using method 2")
             predictions = multivariate_2(data2, columns2)    
@@ -87,28 +85,8 @@ def eval_multivariate(data, columns, name, runs):
             plt.bar(y_pos, np.sort(predictions), align='center', alpha=0.5)
             f.savefig("Results/" + name+"_multivariate_ranked.pdf", bbox_inches='tight')
 
-        pdfs = []
-        
-        try:
-            td = stats.gaussian_kde(predictions)
-            pdfs = td.pdf(predictions)
-        except:
-            print("statsmodels multivariate did not work, using method 2")
-            sorted_p = multivariate_2(data2, columns2)    
-
-            y_pos = np.arange(len(predictions))
-
-            if run == 0:
-                print("Plotting results and saving as multivariate_ranked.pdf")
-                f = plt.figure()
-                plt.title(name+": multivariate PDF")
-                plt.ylabel('PDF')
-                plt.bar(y_pos, sorted_p, align='center', alpha=0.5)
-                f.savefig("Results/" + name+"_multivariate_ranked.pdf", bbox_inches='tight')
-
-        td = stats.gaussian_kde(predictions)
-        pdfs = td.pdf(predictions)
-        res = pd.DataFrame.from_dict({"pdf": pdfs})
+        res = pd.DataFrame.from_dict({"pdf": predictions})
+        res.set_index(data2.index, inplace=True)
 
         results = {}
         found = False
@@ -116,13 +94,12 @@ def eval_multivariate(data, columns, name, runs):
             perc = np.percentile(res['pdf'], percentile)
             idxs = res[res['pdf'] <= perc].index
 
-            tp = sum(data2['class'].iloc[idxs])
-            fp = len(data2.iloc[idxs]) - sum(data2['class'].iloc[idxs])
-            fn = sum(data2['class']) - sum(data2['class'].iloc[idxs])
+            tp = sum(data2['class'].loc[idxs])
+            fp = len(idxs) - tp
+            fn = sum(data2['class']) - tp
             
             if tp == len(target_sample):
                 if found == False:
-                    #print("FP:" + str(fp) + "percentile:" + str(percentile))
                     found = True
                     fps.append(fp)
             
@@ -172,12 +149,9 @@ def regression_err(data, columns, name, runs):
         # design training data using a random sample of outliers
         d_train = data[data['class'] == 0.0]
 
-        target_sample = target.sample(n= int(len(target) * 0.75), replace=False)
+        target_sample = target.sample(n= int(len(target) * 0.75), replace=False, random_state=np.random.RandomState(seed=None))
         d_train = d_train.append(target_sample)
         d_train, columns2 = preprocess(d_train, columns)
-        
-        # Find outlier indices      
-        outliers_idx = d_train[d_train['class'] > 0].index
 
         for col in columns2:
             # Assign learning and target features
@@ -191,10 +165,12 @@ def regression_err(data, columns, name, runs):
             p_x = model.predict(d_train[features])
             e = p_x - d_train[target_f].values
 
-            td = stats.gaussian_kde(e)
-            pdfs = td.pdf(e)
+            td = sm.nonparametric.KDEUnivariate(e)#stats.gaussian_kde(e)
+            td.fit()
+            #pdfs = td.pdf(e)
+            predictions = td.evaluate(e)
 
-            res = pd.DataFrame.from_dict({"pdf": pdfs})
+            res = pd.DataFrame.from_dict({"pdf": predictions})
             res.set_index(d_train.index, inplace=True)
 
             min_fp = len(d_train)
@@ -206,7 +182,7 @@ def regression_err(data, columns, name, runs):
 
                 tp = sum(d_train['class'].loc[idxs])
                 fp = len(idxs) - tp
-                fn = sum(d_train['class']) - tp    
+                fn = sum(d_train['class']) - tp   
 
                 if tp == sum(d_train['class']):
                     found = True
@@ -219,7 +195,7 @@ def regression_err(data, columns, name, runs):
                     fithp["TP"][run] = tp
                     fithp["FP"][run] = fp
                     fithp["FN"][run] = fn
-                    fithp["PDF"].append(pdfs)
+                    fithp["PDF"].append(predictions)
                     fith_p[col] = fithp
 
             if found:
@@ -236,13 +212,12 @@ def regression_err(data, columns, name, runs):
     plt.title(name+": Regression error PDF")
     plt.ylabel('PDF')
 
-    low_fp = 1e10
+    best_tp = 0
     best_col = None
     best_i = 0
 
-    for col in columns:
-        print(col)
-        print("TP: " + str(np.mean(fith_p[col]["TP"])) + "+-" + str(np.std(fith_p[col]["TP"])) + " FP: " + str(np.mean(fith_p[col]["FP"])) + "+-" + str(np.std(fith_p[col]["FP"])) + " FN: " + str(np.mean(fith_p[col]["FN"])) + "+-" + str(np.std(fith_p[col]["FN"])))
+    for col in columns2:
+        print(col + " TP: " + str(np.mean(fith_p[col]["TP"])) + "+-" + str(np.std(fith_p[col]["TP"])) + " FP: " + str(np.mean(fith_p[col]["FP"])) + "+-" + str(np.std(fith_p[col]["FP"])) + " FN: " + str(np.mean(fith_p[col]["FN"])) + "+-" + str(np.std(fith_p[col]["FN"])))
 
         best_idx = 0
         best_f1 = 0
@@ -259,13 +234,14 @@ def regression_err(data, columns, name, runs):
                 best_f1 = f1
                 best_idx = i
 
+        tp = np.mean(fith_p[col]["TP"])
+
         # Avoid situation where the model doesn't alert on anything and we later want to plot the PDF of this which doesn't exist
-        if (np.mean(fith_p[col]["FP"]) < low_fp) & ((np.mean(fith_p[col]["FP"]) != 0) & (np.mean(fith_p[col]["TP"]) != 0) & (np.mean(fith_p[col]["FN"]) != 0)):
-            low_fp = np.mean(fith_p[col]["FP"])
+        if tp > best_tp:
+            best_tp = tp
             best_col = col
             best_i = best_idx
 
-    print(best_col, len(fith_p[best_col]["PDF"]), best_i)
     plt.plot(range(0, len(fith_p[best_col]["PDF"][best_i])), np.sort(fith_p[best_col]["PDF"][best_i]), label=col)
 
     f.legend()
@@ -273,6 +249,8 @@ def regression_err(data, columns, name, runs):
 
     best_fps = 10e10
     best_c = None
+
+    print()
 
     for c in columns:
         if len(fps[c]) > 0:
@@ -285,4 +263,6 @@ def regression_err(data, columns, name, runs):
     t1_results = {"c" : best_col, "tp": "%.2f +- %.2f " % (np.mean(fith_p[best_col]['TP']), np.std(fith_p[best_col]['TP'])), "fp" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FP']), np.std(fith_p[best_col]['FP'])), "fn" : "%.2f +- %.2f" % (np.mean(fith_p[best_col]['FN']), np.std(fith_p[best_col]['FN']))}
     t2_results = {"c" : best_c, "fp" : "%.2f +- %.2f " % (np.mean(fps[best_c]), np.std(fps[best_c]))}
     
+    print("Best col: %s Best TP: %s" % (best_col, np.mean(fith_p[best_col]['TP'])))
+
     return t1_results, t2_results
