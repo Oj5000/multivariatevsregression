@@ -3,7 +3,6 @@ import pandas as pd
 class Parkinsons:
 
 	def get_data(self):
-		print(type(self).__name__)
 		data = pd.read_csv("data/"+type(self).__name__+".csv")
 
 		data = data.drop(columns='id')

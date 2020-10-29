@@ -3,7 +3,6 @@ import pandas as pd
 class Secom:
 
 	def get_data(self):
-		print(type(self).__name__)
 		data = pd.read_csv("data/"+type(self).__name__+".csv")
 		labels = pd.read_csv("data/"+type(self).__name__+"_labels.csv")
 

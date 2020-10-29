@@ -3,7 +3,6 @@ import pandas as pd
 class Shuttle:
 
 	def get_data(self):
-		print(type(self).__name__)
 		data = pd.read_csv("data/"+type(self).__name__+".csv")
 
 		# Class = 1 constitutes 80% class mix

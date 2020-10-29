@@ -3,7 +3,6 @@ import pandas as pd
 class Ecoli:
 
 	def get_data(self):
-		print(type(self).__name__)
 		data = pd.read_csv("data/"+type(self).__name__+".csv")
 
 		# Use imL, imS and omL as our outlier class
