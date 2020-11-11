@@ -107,9 +107,10 @@ def eval_multivariate(data, columns, name, runs):
 
         print("Plotting results and saving as %s.pdf" % evaluator.chartName)
 
-        fig = sns.displot(best_results, x='Density', hue='class', element="step", fill=True)
+        fig = sns.displot(best_results, bins=10, x='Density', hue='class', element="step", fill=True)
         plt.title("%s: %s PDF" % (name, evaluator.type))
         fig.savefig("Results/" + name+"_%s.pdf" % evaluator.chartName)
+        plt.close()
 
         print("TP: " + str(np.mean(evaluator.fith_p_tp)) + "+-" + str(np.std(evaluator.fith_p_tp)) + " FP: " + str(np.mean(evaluator.fith_p_fp)) + "+-" + str(np.std(evaluator.fith_p_fp)) + " FN: " + str(np.mean(evaluator.fith_p_fn)) + "+-" + str(np.std(evaluator.fith_p_fn)))
         print("Mean fp for all tp: " + str(np.mean(fps)) + " +- " + str(np.std(fps)))
