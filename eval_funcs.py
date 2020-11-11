@@ -1,18 +1,17 @@
 import pandas as pd
 import numpy as np
-from numpy import inf
-import math
-from time import strptime
 import matplotlib.pyplot as plt
 from pandas import DataFrame as df
 from matplotlib.backends.backend_pdf import PdfPages
-import statsmodels.api as sm
-from scipy import stats
 from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import LogisticRegression
-from sklearn import svm
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
 import copy
 import seaborn as sns
+import statsmodels.api as sm
+
+from multivariate.NonParametricMultivariateKDE import NonParametricMultivariateKDE
+from multivariate.ParametricMultivariateKDE import ParametricMultivariateKDE
 
 def preprocess(data, columns):
     # Simple pre-processing
@@ -23,8 +22,10 @@ def preprocess(data, columns):
 
     for col in columns:
         if len(pd.unique(data[col])) == 1:
-            print("Removing field %s - values all the same" % col)
             del_fields.append(col)
+
+    if len(del_fields) > 0:
+        print("Removing fields %s - values all the same" % del_fields)
 
     data2 = data.drop(columns = del_fields)
 
@@ -41,8 +42,10 @@ def preprocess(data, columns):
 
     for col in columns2:
         if len(pd.unique(data2[col])) == 1:
-            print("Removing field %s - values all the same" % col)
             del_fields.append(col)
+
+    if len(del_fields) > 0:
+        print("Removing fields %s - values all the same" % del_fields)
 
     data2 = data2.drop(columns = del_fields)
 
@@ -57,87 +60,64 @@ def eval_multivariate(data, columns, name, runs):
     data, columns2 = preprocess(data, columns)
 
     target = data[data['class'] == 1.0]
-    fps = []
+    evaluators = [ParametricMultivariateKDE(), NonParametricMultivariateKDE()]
 
-    fith_p_tp = []
-    fith_p_fp = []
-    fith_p_fn = []
+    for evaluator in evaluators:
 
-    best_results = None
-    best_f1 = 0
+        best_results = None
+        best_f1 = 0
+        fps = []
 
-    for run in range(0, runs):
-        # design training data using a random sample of outliers
-        data2 = data[data['class'] == 0.0]
-        target_sample = target.sample(n= int(len(target) * 0.75), replace=False, random_state=np.random.RandomState(seed=None))
-        data2 = data2.append(target_sample)
+        for run in range(0, runs):
+            # design training data using a random sample of outliers
+            data2 = data[data['class'] == 0.0]
+            target_sample = target.sample(n= int(len(target) * 0.75), replace=False, random_state=np.random.RandomState(seed=None))
+            data2 = data2.append(target_sample)
 
-        v_type = ""
-        for i in range(0, len(columns2)):
-            v_type += 'c'
-        try:
-            dens_u = sm.nonparametric.KDEMultivariate(data=data2[columns2], var_type=v_type, bw='normal_reference')
-            predictions = dens_u.pdf(data2[columns2])
-        except:
-            print("statsmodels multivariate did not work, using method 2")
-            predictions = multivariate_2(data2, columns2)    
+            predictions = evaluator.fitpredict(data2[columns2])
 
-        res = pd.DataFrame.from_dict({"Density": predictions, 'class' : data2['class']})
-        res.set_index(data2.index, inplace=True)
+            res = pd.DataFrame.from_dict({"Density": predictions, 'class' : data2['class']})
+            res.set_index(data2.index, inplace=True)
 
-        results = {}
-        found = False
-        for percentile in range(0, 101, 1):
-            perc = np.percentile(res['Density'], percentile)
-            idxs = res[res['Density'] <= perc].index
+            results = {}
+            found = False
+            for percentile in range(0, 101, 1):
+                perc = np.percentile(res['Density'], percentile)
+                idxs = res[res['Density'] <= perc].index
 
-            tp = sum(data2['class'].loc[idxs])
-            fp = len(idxs) - tp
-            fn = sum(data2['class']) - tp
+                tp = sum(data2['class'].loc[idxs])
+                fp = len(idxs) - tp
+                fn = sum(data2['class']) - tp
 
-            if tp == len(target_sample):
-                if found == False:
-                    found = True
-                    fps.append(fp)
-            
-            if percentile == 5:
-                fith_p_tp.append(tp)
-                fith_p_fp.append(fp)
-                fith_p_fn.append(fn)
+                if tp == len(target_sample):
+                    if found == False:
+                        found = True
+                        fps.append(fp)
+                
+                if percentile == 5:
+                    evaluator.fith_p_tp.append(tp)
+                    evaluator.fith_p_fp.append(fp)
+                    evaluator.fith_p_fn.append(fn)
 
-                f1 = tp/(tp + ((fp+fn)*0.5))
+                    f1 = tp/(tp + ((fp+fn)*0.5))
 
-                if f1 >= best_f1:
-                    best_f1 = f1
-                    best_results = res
+                    if f1 >= best_f1:
+                        best_f1 = f1
+                        best_results = res
 
-    print("Plotting results and saving as multivariate_ranked.pdf")
+        print("Plotting results and saving as %s.pdf" % evaluator.chartName)
 
-    fig = sns.displot(best_results, x='Density', hue='class', element="step", fill=True)
-    plt.title(name+": Multivariate PDF")
-    fig.savefig("Results/" + name+"_multivariate_ranked.pdf")
+        fig = sns.displot(best_results, x='Density', hue='class', element="step", fill=True)
+        plt.title("%s: %s PDF" % (name, evaluator.type))
+        fig.savefig("Results/" + name+"_%s.pdf" % evaluator.chartName)
 
-    print("TP: " + str(np.mean(fith_p_tp)) + "+-" + str(np.std(fith_p_tp)) + " FP: " + str(np.mean(fith_p_fp)) + "+-" + str(np.std(fith_p_fp)) + " FN: " + str(np.mean(fith_p_fn)) + "+-" + str(np.std(fith_p_fn)))
-    print("Mean fp for all tp: " + str(np.mean(fps)) + " +- " + str(np.std(fps)))
+        print("TP: " + str(np.mean(evaluator.fith_p_tp)) + "+-" + str(np.std(evaluator.fith_p_tp)) + " FP: " + str(np.mean(evaluator.fith_p_fp)) + "+-" + str(np.std(evaluator.fith_p_fp)) + " FN: " + str(np.mean(evaluator.fith_p_fn)) + "+-" + str(np.std(evaluator.fith_p_fn)))
+        print("Mean fp for all tp: " + str(np.mean(fps)) + " +- " + str(np.std(fps)))
 
-    t1_results = {'tp' : "%.2f +- %.2f" % (np.mean(fith_p_tp), np.std(fith_p_tp)), 'fp' : "%.2f +- %.2f" % (np.mean(fith_p_fp), np.std(fith_p_fp)), 'fn' : "%.2f +- %.2f" % (np.mean(fith_p_fn), np.std(fith_p_fn)) }
-    t2_results = "%.2f +- %.2f" % (np.mean(fps), np.std(fps))
+        evaluator.setResults({'tp' : "%.2f +- %.2f" % (np.mean(evaluator.fith_p_tp), np.std(evaluator.fith_p_tp)), 'fp' : "%.2f +- %.2f" % (np.mean(evaluator.fith_p_fp), np.std(evaluator.fith_p_fp)), 'fn' : "%.2f +- %.2f" % (np.mean(evaluator.fith_p_fn), np.std(evaluator.fith_p_fn)) },
+                             "%.2f +- %.2f" % (np.mean(fps), np.std(fps)))
 
-    return t1_results, t2_results
-
-def multivariate_2(data, columns):
-    # Second try using NM idea
-    t = np.zeros(np.shape(data), dtype=float)
-
-    idx = 0
-    for col in columns:
-        model = stats.gaussian_kde(data[col])
-        t[:,idx] = model.pdf(data[col])
-        idx += 1
-
-    a = np.sum(t, axis=1)
-
-    return a
+    return evaluators
 
 def regression_err(data, columns, name, runs):
     print("Regression error analysis")
@@ -170,20 +150,28 @@ def regression_err(data, columns, name, runs):
             features = columns2.copy()
             features.remove(target_f)
 
-            model = LinearRegression()
+            #model = LinearRegression()
+            model = make_pipeline(PolynomialFeatures(2), LinearRegression())
             model = model.fit(d_train[features], d_train[target_f])
             #lr_models[col] = copy.deepcopy(model)
 
             p_x = model.predict(d_train[features])
-            e = d_train[target_f].values - p_x
+            e = np.abs(d_train[target_f].values - p_x)
             e_df[col] = e
 
-        # Then build another regression based on all errors
         e_df = pd.DataFrame.from_dict(e_df)
         e_df.set_index(d_train.index, inplace=True)
 
-        model = LinearRegression() # SVM / logistic regression - compare against original data on SVM
-        #model = svm.SVC(kernel='poly', degree=3, gamma='auto', C=1.0)
+        # Try multivariate KDE here.
+        #v_type = ""
+        #for i in range(0, len(columns2)):
+        #    v_type += 'c'
+            
+        #dens_u = sm.nonparametric.KDEMultivariate(data=e_df[columns2], var_type=v_type, bw='normal_reference')
+        #predictions = dens_u.pdf(e_df[columns2])
+
+        # Then build another regression based on all errors
+        model = model = make_pipeline(PolynomialFeatures(2), LinearRegression()) #LinearRegression()
         model = model.fit(e_df[columns2], d_train['class'])
 
         # How well does this model do at classifying?
@@ -192,26 +180,44 @@ def regression_err(data, columns, name, runs):
         td = sm.nonparametric.KDEUnivariate(model.predict(e_df[columns2]))
         td.fit()
 
-        # Add missing test data
-        #e_df_test = {}
-        #for col in columns2:
-        #    target_f = col
-        #    features = columns2.copy()
-        #    features.remove(target_f)
+                # Add missing test data
+                # e_df_test = {}
+                # for col in columns2:
+                #     target_f = col
+                #     features = columns2.copy()
+                #     features.remove(target_f)
 
-        #    p_x = lr_models[col].predict(target[features])
-        #    e = target[target_f].values - p_x
+                #    p_x = lr_models[col].predict(target[features])
+                #    e = target[target_f].values - p_x
 
-        #    e_df_test[col] = e
+                #    e_df_test[col] = e
 
-        #e_df_test = pd.DataFrame.from_dict(e_df_test)
-        #e_df_test.set_index(target.index, inplace=True)
-        
-        #e_df = e_df.append(e_df_test)
-        #e_df = e_df.drop_duplicates()
+                #e_df_test = pd.DataFrame.from_dict(e_df_test)
+                #e_df_test.set_index(target.index, inplace=True)
+                
+                #e_df = e_df.append(e_df_test)
+                #e_df = e_df.drop_duplicates()
 
         # Get some predictions 
-        predictions = td.evaluate(model.predict(e_df[columns2]))
+        if len(e_df) > 100000:
+            predictions = []
+
+            n = 0
+            batch_size = 2000
+            x = n + batch_size
+
+            while n < len(e_df):
+                predictions.extend(td.evaluate(model.predict(e_df[columns2].iloc[n:x])))
+
+                n = n + batch_size
+
+                if (x + batch_size) >= len(e_df):
+                    x = len(e_df)
+                else:
+                    x = n + batch_size
+
+        else:
+            predictions = td.evaluate(model.predict(e_df[columns2]))
 
         res = pd.DataFrame.from_dict({"pdf": predictions})
         res.set_index(e_df.index, inplace=True)

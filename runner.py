@@ -7,7 +7,6 @@ from eval_funcs import *
 from Ecoli import Ecoli
 from Thyroid import Thyroid
 from Avila import Avila
-from Parkinsons import Parkinsons
 from Secom import Secom
 from Fertility import Fertility
 from Wine import Wine
@@ -17,7 +16,7 @@ from Shuttle import Shuttle
 from Yeast import Yeast
 
 runs = 10
-datasets = [Fertility(), Thyroid(), Ecoli(), Wisconsin(), Banknote(), Yeast(), Avila(), Parkinsons(), Secom(), Wine(), Shuttle()]
+datasets = [Fertility(), Thyroid(), Ecoli(), Wisconsin(), Banknote(), Yeast(), Avila(), Secom(), Wine(), Shuttle()]
 
 dataset_descriptions = {
     'Name' : [],
@@ -44,29 +43,33 @@ for dataset in datasets:
 
     print("Loading %s data" % name)
     data, columns = dataset.get_data()
-    
-    midx1.append((name, 'M-KDE'))
-    midx1.append((name, 'R-E-KDE'))
-    midx2.append((name, 'M-KDE'))
-    midx2.append((name, 'R-E-KDE'))
 
-    t1results, t2results = eval_multivariate(data, columns, name, runs)
+    multivariate_results = eval_multivariate(data, columns, name, runs)
     t1r, t2r = regression_err(data, columns, name, runs)
 
+    # Dataset descriptions LaTeX table
     dataset_descriptions['Name'].append(name)
     dataset_descriptions['Total records'].append(len(data))
     dataset_descriptions['Total features'].append(len(columns))
     dataset_descriptions['Total outliers'].append(np.sum(data['class']))
 
-    table1['Outliers Detected'].append(t1results['tp'])
-    table1['Outliers Missed'].append(t1results['fn'])
-    table1['False Positives'].append(t1results['fp'])
+    for result in multivariate_results:
+        # Multivariate KDE section in T1
+        midx1.append((name, result.type))
+        table1['Outliers Detected'].append(result.t1results['tp'])
+        table1['Outliers Missed'].append(result.t1results['fn'])
+        table1['False Positives'].append(result.t1results['fp'])
 
+        # Multivariate KDE section in T2
+        midx2.append((name, result.type))
+        table2['False Positives'].append(result.t2results)
+    
+    midx1.append((name, 'Regression'))
     table1['Outliers Detected'].append(t1r['tp'])
     table1['Outliers Missed'].append(t1r['fn'])
     table1['False Positives'].append(t1r['fp'])
 
-    table2['False Positives'].append(t2results)
+    midx2.append((name, 'Regression'))
     table2['False Positives'].append(t2r['fp'])
 
 df0 = pd.DataFrame(dataset_descriptions)
