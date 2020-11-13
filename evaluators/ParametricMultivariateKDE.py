@@ -1,17 +1,17 @@
-from multivariate.MultivariateBase import MultivariateBase
+from evaluators.EvaluatorBase import EvaluatorBase
 
 from scipy.stats import multivariate_normal
 import numpy as np
 
-class ParametricMultivariateKDE (MultivariateBase):
+class ParametricMultivariateKDE (EvaluatorBase):
 
     def __init__(self):
-        MultivariateBase.__init__(self)
+        EvaluatorBase.__init__(self)
 
         self.type = 'Parametric Multivariate KDE'
-        self.chartName = 'parametric_multivariate_ranked'
+        self.chartName = 'parametric_multivariate'
 
-    def fitpredict(self, data):
+    def fitpredict(self, data, target=None):
         sample_mean = np.mean(data).values
         cov_m = np.cov(np.transpose(data))
         x = data.values

@@ -1,7 +1,11 @@
 
-class MultivariateBase:
+class EvaluatorBase:
 
     def __init__(self):
+        self.best_results = None
+        self.best_f1 = 0
+        self.fps = []
+        
         self.fith_p_tp = []
         self.fith_p_fp = []
         self.fith_p_fn = []
@@ -9,7 +13,7 @@ class MultivariateBase:
         self.t1results = {}
         self.t2results = ''
 
-    def fitpredict(self, data):
+    def fitpredict(self, data, target=None):
         pass
 
     def setResults(self, t1, t2):

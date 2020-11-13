@@ -1,16 +1,16 @@
-from multivariate.MultivariateBase import MultivariateBase
+from evaluators.EvaluatorBase import EvaluatorBase
 
 import statsmodels.api as sm
 
-class NonParametricMultivariateKDE (MultivariateBase):
+class NonParametricMultivariateKDE (EvaluatorBase):
 
     def __init__(self):
-        MultivariateBase.__init__(self)
+        EvaluatorBase.__init__(self)
 
         self.type = 'Non Parametric Multivariate KDE'
-        self.chartName = 'nonparametric_multivariate_ranked'
+        self.chartName = 'nonparametric_multivariate'
 
-    def fitpredict(self, data):
+    def fitpredict(self, data, target=None):
         v_type = ""
         for i in range(0, len(data.columns)):
             v_type += 'c'

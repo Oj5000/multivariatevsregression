@@ -44,8 +44,7 @@ for dataset in datasets:
     print("Loading %s data" % name)
     data, columns = dataset.get_data()
 
-    multivariate_results = eval_multivariate(data, columns, name, runs)
-    t1r, t2r = regression_err(data, columns, name, runs)
+    results = evaluate(data, columns, name, runs)
 
     # Dataset descriptions LaTeX table
     dataset_descriptions['Name'].append(name)
@@ -53,7 +52,7 @@ for dataset in datasets:
     dataset_descriptions['Total features'].append(len(columns))
     dataset_descriptions['Total outliers'].append(np.sum(data['class']))
 
-    for result in multivariate_results:
+    for result in results:
         # Multivariate KDE section in T1
         midx1.append((name, result.type))
         table1['Outliers Detected'].append(result.t1results['tp'])
@@ -63,14 +62,6 @@ for dataset in datasets:
         # Multivariate KDE section in T2
         midx2.append((name, result.type))
         table2['False Positives'].append(result.t2results)
-    
-    midx1.append((name, 'Regression'))
-    table1['Outliers Detected'].append(t1r['tp'])
-    table1['Outliers Missed'].append(t1r['fn'])
-    table1['False Positives'].append(t1r['fp'])
-
-    midx2.append((name, 'Regression'))
-    table2['False Positives'].append(t2r['fp'])
 
 df0 = pd.DataFrame(dataset_descriptions)
 df1 = pd.DataFrame(table1, index=pd.MultiIndex.from_tuples(midx1, names=['Dataset', 'Method']))
