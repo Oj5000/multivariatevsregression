@@ -10,6 +10,7 @@ class ParametricMultivariateKDE (EvaluatorBase):
 
         self.type = 'Parametric Multivariate KDE'
         self.chartName = 'parametric_multivariate'
+        self.marker = 's'
 
     def fitpredict(self, data, target=None):
         sample_mean = np.mean(data).values

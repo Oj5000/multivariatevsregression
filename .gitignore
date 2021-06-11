@@ -1,2 +1,6 @@
 __pycache*
 *.ipynb
+*.csv
+*.zip
+Results/*
+debug.log

@@ -13,7 +13,7 @@ class EvaluatorBase:
         self.t1results = {}
         self.t2results = ''
 
-    def fitpredict(self, data, target=None):
+    def fitpredict(self, data):
         pass
 
     def setResults(self, t1, t2):

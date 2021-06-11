@@ -9,6 +9,7 @@ class NonParametricMultivariateKDE (EvaluatorBase):
 
         self.type = 'Non Parametric Multivariate KDE'
         self.chartName = 'nonparametric_multivariate'
+        self.marker = 'd'
 
     def fitpredict(self, data, target=None):
         v_type = ""
