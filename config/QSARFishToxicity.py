@@ -1,5 +1,6 @@
 import pandas as pd
 import os.path
+import os
 from DataSetBase import DataSetBase
 
 class QSARFishToxicity(DataSetBase):
@@ -10,7 +11,10 @@ class QSARFishToxicity(DataSetBase):
 
         if not os.path.exists("data/"+name+".csv"):
             self.download_data(url, name)
+            os.rename("data/qsar_fish_toxicity.csv", "data/"+name+".csv")
             print("Done.")
 
-        self.data = pd.read_csv("data/"+name+".csv")
-        self.columns = data.columns
+        self.data = pd.read_csv("data/"+name+".csv", sep=';')
+        self.columns = list(range(len(self.data.columns)))
+
+        self.data.columns = self.columns

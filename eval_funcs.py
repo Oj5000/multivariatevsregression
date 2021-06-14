@@ -10,43 +10,73 @@ from evaluators.ParametricMultivariateKDE import ParametricMultivariateKDE
 from evaluators.MultivariateDensity import MultivariateDensity
 from evaluators.LinearEvaluator import LinearEvaluator
 
-def evaluate(dataset, name, runs):
+def evaluate(dataset, runs, mutation):
     dataset.preprocess()
-    evaluators = [MultivariateDensity()] #LinearEvaluator(1),
+    evaluators = [MultivariateDensity(), LinearEvaluator(dataset.columns, 1)]
 
     for run in range(0, runs):
         print("Run %s of %s" % (run+1, runs))
 
-        sample_idx, data = dataset.mutate(0.2)
+        sample_idx, data = dataset.mutate(mutation)
 
         for evaluator in evaluators:
             print("Running " + evaluator.type)
             predictions = evaluator.fitpredict(data)
-            results = get_results(data, sample_idx)
+
+            auc, all_tp = get_results(predictions, sample_idx)
+            evaluator.addResults(auc, all_tp)
 
     return evaluators
 
-# Improve this by finding all thresholds, then doing an np.where - should only take 1 pass and be way faster
-def get_results(data, sample_idx):
+def get_results(predictions, sample_idx):
     Npoints = 50
-    res = []
-    thRange = np.linspace(np.min(data), np.max(data), Npoints)
+    thRange = np.linspace(np.min(predictions), np.max(predictions), Npoints)
 
     npos = len(sample_idx)
-    nneg = len(data) - npos
+    nneg = len(predictions) - npos
 
-    tpr = pd.DataFrame(columns=data.columns)
-    fpr = pd.DataFrame(columns=data.columns)
+    all_tp = None
 
-    for i in range(Npoints):
-        results = (data >= thRange[i])
+    if predictions.shape[1] > 1:
+        tpr = pd.DataFrame(columns=predictions.columns)
+        fpr = pd.DataFrame(columns=predictions.columns)
 
-        tpr = tpr.append(pd.DataFrame([results.iloc[sample_idx].sum() / npos], columns=data.columns))
-        fpr = fpr.append(pd.DataFrame([results.iloc[~results.index.isin(sample_idx)].sum() / nneg], columns=data.columns))
+        # Regression
+        for i in range(Npoints):
+            results = (predictions >= thRange[i])
 
-    auc = []
+            tp_r = results.iloc[sample_idx].sum() / npos
+            fp_r = results.iloc[~results.index.isin(sample_idx)].sum() / nneg
 
-    for i in range(len(data.columns)):
-        auc.append(metrics.auc(fpr.iloc[:,i].values, tpr.iloc[:,i].values))
+            tpr = tpr.append(pd.DataFrame([tp_r], columns=predictions.columns))
+            fpr = fpr.append(pd.DataFrame([fp_r], columns=predictions.columns))
 
-    return auc
+            if all_tp is None:
+                if tp_r.values[0] == 1:
+                    all_tp = fp_r.values[0] * nneg
+
+        auc = []
+
+        for i in range(len(predictions.columns)):
+            auc.append(metrics.auc(fpr.iloc[:,i].values, tpr.iloc[:,i].values))
+    else:
+        tpr = []
+        fpr = []
+
+        # density
+        for i in range(Npoints):
+            results = (predictions <= thRange[i])
+
+            tp_r = (results.iloc[sample_idx].sum() / npos).values[0]
+            fp_r = (results.iloc[~results.index.isin(sample_idx)].sum() / nneg).values[0]
+
+            tpr.append(tp_r)
+            fpr.append(fp_r)
+
+            if all_tp is None:
+                if tp_r == 1:
+                    all_tp = fp_r * nneg
+
+        auc = metrics.auc(fpr, tpr)
+
+    return auc, all_tp

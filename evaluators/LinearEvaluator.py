@@ -10,8 +10,8 @@ from evaluators.RegressionBase import RegressionBase
 
 class LinearEvaluator(RegressionBase):
 
-    def __init__(self, polynomials):
-        RegressionBase.__init__(self, polynomials)
+    def __init__(self, columns, polynomials):
+        RegressionBase.__init__(self, columns, polynomials)
 
     def fitpredict(self, data):
         e_df = {}

@@ -37,4 +37,4 @@ class WaveEnergyConverters(DataSetBase):
             print("Done")
 
         self.data = pd.read_csv("data/"+name+".csv")
-        self.columns = self.data.columns
+        self.columns = list(range(len(self.data.columns)))
