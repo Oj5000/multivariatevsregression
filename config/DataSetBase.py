@@ -47,7 +47,7 @@ class DataSetBase:
 
     def preprocess(self):
         # Simple pre-processing
-        columns = self.data.columns.copy()
+        columns = list(self.data.columns.copy())
         
         # del singular valued cols
         del_fields = []
@@ -93,13 +93,18 @@ class DataSetBase:
     def mutate(self, percent_mutation):
         # randomly select data to mutate
         sample = self.data.sample(round(len(self.data)*percent_mutation))
-
+        
         # make a backup of the sampled data
         self.sample_original = self.data.loc[sample.index].copy()
 
-        # Mutate the sample
-        sample = 1.2*sample*np.random.randn()
+        # Mutate the sample   pd.Index(
+        for i in range(len(sample)):
+            for j in range(len(sample.columns)):
+                sample.iloc[i, j] = 1.2*np.std(sample[sample.columns[j]])*np.random.randn()
 
         self.data.loc[sample.index] = sample
 
         return sample.index, self.data
+
+    def restore(self):
+        self.data.loc[self.sample_original.index] = self.sample_original

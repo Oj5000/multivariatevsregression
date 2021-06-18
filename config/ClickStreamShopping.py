@@ -2,6 +2,8 @@ import os
 import random
 from os import listdir
 from os.path import isfile, join
+import pandas as pd
+import numpy as np
 from DataSetBase import DataSetBase
 
 class ClickStreamShopping(DataSetBase):
@@ -23,21 +25,25 @@ class ClickStreamShopping(DataSetBase):
             print("Done.")
 
         self.data = pd.read_csv("data/"+name+".csv", sep=';')
-        self.columns = data.columns
+        self.data.drop(columns=['page 2 (clothing model)'], inplace=True)
+        self.columns = self.data.columns
 
     # override
-    def mutate(self, data, percent_mutation):
+    def mutate(self, percent_mutation):
         # randomly select data to mutate
-        sample = data.sample(round(len(data)*percent_mutation))
+        sample = self.data.sample(round(len(self.data)*percent_mutation))
 
         # make a backup of the sampled data
-        sample_original = data.loc[sample.index].copy()
+        self.sample_original = self.data.loc[sample.index].copy()
 
         # Mutate the sample. In this case we are dealing with categoric data.
         for c in sample.columns:
             vals = np.unique(sample[c])
 
-            if len(vals) < (len(data)*0.5):
+            if len(vals) < (len(self.data)*0.5):
                 sample[c] = random.choice(vals)
             else:
                 sample[c] = 1.2*sample[c]*np.random.randn()
+
+        self.data.loc[sample.index] = sample
+        return sample.index, self.data

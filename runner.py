@@ -5,13 +5,14 @@ sys.path.append('config/')
 import numpy as np
 from eval_funcs import *
 
-from config.WaveEnergyConverters import WaveEnergyConverters
 from config.ClickStreamShopping import ClickStreamShopping
 from config.QSARFishToxicity import QSARFishToxicity
+from config.GasEmission import GasEmission
+from config.AirQuality import AirQuality
 
 runs = 10
-mutation = 0.2 # 20% mutation
-datasets = [QSARFishToxicity()]#, WaveEnergyConverters(), ClickStreamShopping()]
+mutation = 0.3 # 20% mutation
+datasets = [AirQuality(), GasEmission(), QSARFishToxicity()]#, ClickStreamShopping()]
 
 dataset_descriptions = {
     'Name' : [],
@@ -61,7 +62,7 @@ for dataset in datasets:
 
         # Multivariate KDE section in T2
         midx2.append((name, result.type))
-        table2['False Positives'].append(str(np.mean(result.all_tp)) + "+-" + str(np.std(result.all_tp)))
+        table2['False Positives'].append("%.1f +- %.4f" % (np.mean(result.all_tp), np.std(result.all_tp)))
 
 df0 = pd.DataFrame(dataset_descriptions)
 df1 = pd.DataFrame(table1, index=pd.MultiIndex.from_tuples(midx1, names=['Dataset', 'Method']))

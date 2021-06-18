@@ -34,4 +34,4 @@ class RegressionBase():
                 pm = std
                 col = c
 
-        return str(col) + " " + str(mu) + "+-" + str(std)
+        return "%s: %.4f +- %.4f" % (col, mu, std)

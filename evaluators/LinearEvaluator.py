@@ -31,7 +31,7 @@ class LinearEvaluator(RegressionBase):
 
             p_x = model.predict(data[features])
             e = (data[target_f].values - p_x)**2
-            e_df[col] = e
+            e_df[col] = np.log(e)
 
         e_df = pd.DataFrame.from_dict(e_df)
         e_df.set_index(data.index, inplace=True)

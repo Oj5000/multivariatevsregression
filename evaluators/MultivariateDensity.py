@@ -14,7 +14,7 @@ class MultivariateDensity(EvaluatorBase):
         self.auc = []
         self.all_tp = []
 
-    def fitpredict(self, data, target=None):
+    def fitpredict(self, data):
         X = data.to_numpy()
 
         lHood = np.zeros((len(data),1))
@@ -36,4 +36,4 @@ class MultivariateDensity(EvaluatorBase):
             self.all_tp.append(all_tp)
 
     def get_auc_result(self):
-        return str(np.mean(self.auc)) + "+-" + str(np.std(self.auc))
+        return "%.4f +- %.4f" % (np.mean(self.auc), np.std(self.auc))
