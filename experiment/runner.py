@@ -12,7 +12,7 @@ from config.CTSliceAxial import CTSliceAxial
 
 runs = 10
 mutation = 0.3 # 20% mutation
-datasets = [QSARFishToxicity()]#[CTSliceAxial(), Superconductivity(), CommunitiesAndCrime(), AirQuality(), GasEmission(), QSARFishToxicity()]
+datasets = [CTSliceAxial(), Superconductivity(), CommunitiesAndCrime(), AirQuality(), GasEmission(), QSARFishToxicity()]
 
 dataset_descriptions = {
     'Name' : [],
@@ -39,6 +39,9 @@ data_sizes = []
 
 if not os.path.exists('data/'):
     os.makedirs('data/')
+
+if not os.path.exists('results/'):
+    os.makedirs('results/')
 
 for dataset in datasets:
     name = type(dataset).__name__
@@ -73,9 +76,6 @@ df0 = pd.DataFrame(dataset_descriptions)
 df1 = pd.DataFrame(table1, index=pd.MultiIndex.from_tuples(midx1, names=['Dataset', 'Method']))
 df2 = pd.DataFrame(table2, index=pd.MultiIndex.from_tuples(midx2, names=['Dataset', 'Method']))
 
-print(df0.to_latex(index=False, caption='Dataset overview', label='datasetoverview'))
-print(df1.to_latex(index=True, multirow = True, caption='Area under the ROC curve', label='table1'))
-print(df2.to_latex(index=True, multirow = True, caption='False positives when detecting all outliers', label='table2'))
 
 with open('results/results.txt', 'w') as writer:
     writer.write(df0.to_latex(index=False, caption='Dataset overview', label='datasetoverview'))
