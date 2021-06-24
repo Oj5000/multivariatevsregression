@@ -4,9 +4,6 @@ import math
 
 from sklearn import metrics
 
-from evaluators.NonParametricMultivariateKDE import NonParametricMultivariateKDE
-from evaluators.ParametricMultivariateKDE import ParametricMultivariateKDE
-
 from evaluators.MultivariateDensity import MultivariateDensity
 from evaluators.LinearEvaluator import LinearEvaluator
 
@@ -14,19 +11,21 @@ def evaluate(dataset, runs, mutation):
     dataset.preprocess()
     evaluators = [MultivariateDensity(), LinearEvaluator(dataset.columns, 1)]
 
-    for run in range(0, runs):
-        print("Run %s of %s" % (run+1, runs))
+    for mutation_amplitude in np.linspace(1.0, 3.0, 10):
+        print("Mutation amplitude: %s" % mutation_amplitude)
+        for run in range(runs):
+            print("   Run %s of %s" % (run+1, runs))
 
-        sample_idx, data = dataset.mutate(mutation)
+            sample_idx, data = dataset.mutate(mutation, mutation_amplitude)
 
-        for evaluator in evaluators:
-            print("Running " + evaluator.type)
-            errors = evaluator.fitpredict(data)
+            for evaluator in evaluators:
+                print("      Running " + evaluator.type)
+                errors = evaluator.fitpredict(data)
 
-            auc, all_tp = get_results(errors, sample_idx)
-            evaluator.addResults(auc, all_tp)
+                auc, all_tp = get_results(errors, sample_idx)
+                evaluator.addResults(mutation_amplitude, auc, all_tp)
 
-        dataset.restore()
+            dataset.restore()
 
     return evaluators
 

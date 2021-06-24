@@ -14,6 +14,8 @@ class MultivariateDensity(EvaluatorBase):
         self.auc = []
         self.all_tp = []
 
+        self.results = {}
+
     def fitpredict(self, data):
         X = data.to_numpy()
 
@@ -29,11 +31,13 @@ class MultivariateDensity(EvaluatorBase):
 
         return pd.DataFrame(lHood, columns=['0'])
 
-    def addResults(self, auc, all_tp):
-        self.auc.append(auc)
+    def addResults(self, mut_amp, auc, all_tp):
+        
+        if mut_amp in self.results:
+            self.results[mut_amp]['auc'].append(auc)
+            self.results[mut_amp]['all_tp'].append(all_tp)
+        else:
+            self.results[mut_amp] = {'auc': [auc], 'all_tp': [all_tp]}
 
-        if all_tp is not None:
-            self.all_tp.append(all_tp)
-
-    def get_auc_result(self):
-        return "%.4f +- %.4f" % (np.mean(self.auc), np.std(self.auc))
+    def get_auc_result(self, mut_amp):
+        return "%.4f +- %.4f" % (np.mean(self.results[mut_amp]['auc']), np.std(self.results[mut_amp]['auc']))

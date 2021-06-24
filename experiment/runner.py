@@ -1,18 +1,18 @@
-import sys
 import os
-sys.path.append('config/')
 
 import numpy as np
 from eval_funcs import *
 
-from config.ClickStreamShopping import ClickStreamShopping
 from config.QSARFishToxicity import QSARFishToxicity
 from config.GasEmission import GasEmission
 from config.AirQuality import AirQuality
+from config.CommunitiesAndCrime import CommunitiesAndCrime
+from config.Superconductivity import Superconductivity
+from config.CTSliceAxial import CTSliceAxial
 
 runs = 10
 mutation = 0.3 # 20% mutation
-datasets = [AirQuality(), GasEmission(), QSARFishToxicity()]#, ClickStreamShopping()]
+datasets = [QSARFishToxicity()]#[CTSliceAxial(), Superconductivity(), CommunitiesAndCrime(), AirQuality(), GasEmission(), QSARFishToxicity()]
 
 dataset_descriptions = {
     'Name' : [],
@@ -22,10 +22,12 @@ dataset_descriptions = {
 }
 
 table1 = {
-    'Area under ROC' : [],
+    'Dataset mutation (*std)' : [],
+    'Area under ROC' : []
 }
 
 table2 = {
+    'Dataset mutation (*std)' : [],
     'False Positives' : []
 }
 
@@ -56,13 +58,16 @@ for dataset in datasets:
     dataset_descriptions['Total outliers'].append(round(len(dataset.data)*mutation))
 
     for result in results:
-        # Multivariate KDE section in T1
-        midx1.append((name, result.type))
-        table1['Area under ROC'].append(result.get_auc_result())
+        for mut_amp in result.results.keys():
+            # Multivariate KDE section in T1
+            midx1.append((name, result.type))
+            table1['Dataset mutation (*std)'].append("%.1f" %mut_amp)
+            table1['Area under ROC'].append(result.get_auc_result(mut_amp))
 
-        # Multivariate KDE section in T2
-        midx2.append((name, result.type))
-        table2['False Positives'].append("%.1f +- %.4f" % (np.mean(result.all_tp), np.std(result.all_tp)))
+            # Multivariate KDE section in T2
+            midx2.append((name, result.type))
+            table2['Dataset mutation (*std)'].append("%.1f" %mut_amp)
+            table2['False Positives'].append("%.1f +- %.4f" % (np.mean(result.results[mut_amp]['all_tp']), np.std(result.results[mut_amp]['all_tp'])))
 
 df0 = pd.DataFrame(dataset_descriptions)
 df1 = pd.DataFrame(table1, index=pd.MultiIndex.from_tuples(midx1, names=['Dataset', 'Method']))
@@ -71,6 +76,16 @@ df2 = pd.DataFrame(table2, index=pd.MultiIndex.from_tuples(midx2, names=['Datase
 print(df0.to_latex(index=False, caption='Dataset overview', label='datasetoverview'))
 print(df1.to_latex(index=True, multirow = True, caption='Area under the ROC curve', label='table1'))
 print(df2.to_latex(index=True, multirow = True, caption='False positives when detecting all outliers', label='table2'))
+
+with open('results/results.txt', 'w') as writer:
+    writer.write(df0.to_latex(index=False, caption='Dataset overview', label='datasetoverview'))
+    writer.write("")
+    writer.write(df1.to_latex(index=True, multirow = True, caption='Area under the ROC curve', label='table1'))
+    writer.write("")
+    writer.write(df2.to_latex(index=True, multirow = True, caption='False positives when detecting all outliers', label='table2'))
+
+    writer.close()
+
 
 # Final performance chart
 #fig = plt.figure()

@@ -1,0 +1,11 @@
+version: '3.7'
+services:
+  experiment:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./results:/usr/src/app/experiment/results
+
+volumes:
+  static_volume:

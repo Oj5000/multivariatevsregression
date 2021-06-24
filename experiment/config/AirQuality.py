@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import zipfile
-from DataSetBase import DataSetBase
+from config.DataSetBase import DataSetBase
 
 class AirQuality(DataSetBase):
 

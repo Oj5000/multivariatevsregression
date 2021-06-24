@@ -1,7 +1,7 @@
 import pandas as pd
 import os.path
 import os
-from DataSetBase import DataSetBase
+from config.DataSetBase import DataSetBase
 
 class QSARFishToxicity(DataSetBase):
 

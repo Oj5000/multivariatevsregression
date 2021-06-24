@@ -90,7 +90,7 @@ class DataSetBase:
         self.data = self.data - np.mean(self.data)
         self.columns = columns
 
-    def mutate(self, percent_mutation):
+    def mutate(self, percent_mutation, mutation_amplitude):
         # randomly select data to mutate
         sample = self.data.sample(round(len(self.data)*percent_mutation))
         
@@ -100,7 +100,7 @@ class DataSetBase:
         # Mutate the sample   pd.Index(
         for i in range(len(sample)):
             for j in range(len(sample.columns)):
-                sample.iloc[i, j] = 1.2*np.std(sample[sample.columns[j]])*np.random.randn()
+                sample.iloc[i, j] = mutation_amplitude*np.std(sample[sample.columns[j]])*np.random.randn()
 
         self.data.loc[sample.index] = sample
 
