@@ -37,6 +37,7 @@ class CTSliceAxial(DataSetBase):
         # drop date and time columns
         self.data.drop(columns=["patientId", "reference"], inplace=True)
         self.columns = self.data.columns
+        self.mutation_cols = list(self.columns)
 
         for c in self.columns:
             try:

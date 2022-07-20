@@ -18,3 +18,4 @@ class QSARFishToxicity(DataSetBase):
         self.columns = list(range(len(self.data.columns)))
 
         self.data.columns = self.columns
+        self.mutation_cols = list(self.columns)

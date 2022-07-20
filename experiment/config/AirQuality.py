@@ -37,6 +37,7 @@ class AirQuality(DataSetBase):
         # drop date and time columns
         self.data.drop(columns=["Date", "Time", 'Unnamed: 15', 'Unnamed: 16'], inplace=True)
         self.columns = self.data.columns
+        self.mutation_cols = list(self.columns)
 
         for c in self.columns:
             try:

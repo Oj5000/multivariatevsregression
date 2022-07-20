@@ -16,7 +16,7 @@ class CommunitiesAndCrime(DataSetBase):
 
         self.data = pd.read_csv("data/"+name+".csv", sep=',', na_values='?')
         self.columns = list(map(str, list(range(len(self.data.columns)))))
-
+        
         self.data.columns = self.columns
-
         self.data.drop(columns=['3'], inplace=True)
+        self.mutation_cols = list(self.data.columns)

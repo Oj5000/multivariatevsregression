@@ -1,5 +1,9 @@
 import os
 
+import matplotlib
+matplotlib.use('Agg')
+
+import matplotlib.pyplot as plt
 import numpy as np
 from eval_funcs import *
 
@@ -9,108 +13,204 @@ from config.AirQuality import AirQuality
 from config.CommunitiesAndCrime import CommunitiesAndCrime
 from config.Superconductivity import Superconductivity
 from config.CTSliceAxial import CTSliceAxial
+from config.Accelerometer import Accelerometer
+from config.BiasCorrection import BiasCorrection
+from config.Cargo2000 import Cargo2000
+from config.Chickenpox import Chickenpox
+from config.CNNPred import CNNPred
+from config.HouseholdPowerConsumption import HouseholdPowerConsumption
+from config.OnlineNewsPopularity import OnlineNewsPopularity
+from config.QueryAnalyticsWorkloads import QueryAnalyticsWorkloads
+from config.WaveEnergyConverters import WaveEnergyConverters
+from config.Synthetic import Synthetic
 
-runs = 10
-mutation = 0.3 # 20% mutation
-datasets = [CTSliceAxial(), Superconductivity(), CommunitiesAndCrime(), AirQuality(), GasEmission(), QSARFishToxicity()]
+def plot_results_all_data(evaluators, name):
 
-dataset_descriptions = {
-    'Name' : [],
-    'Total records' : [],
-    'Total features' : [],
-    'Total outliers' : []
-}
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
 
-table1 = {
-    'Dataset mutation (*std)' : [],
-    'Area under ROC' : []
-}
+    for i in range(len(evaluators)):
+        mutation = []
+        auc = []
 
-table2 = {
-    'Dataset mutation (*std)' : [],
-    'False Positives' : []
-}
+        for key in evaluators[i].results_all_data.keys():
+            mutation.append(key)
 
-midx1 = []
-midx2 = []
+            if i == 0:
+                auc.append(np.mean(evaluators[i].results_all_data[key]['auc']))
+            else:
+                auc.append(float(evaluators[i].get_auc_result_all_data(key).split(" ")[1]))
 
-all_results = []
-data_sizes = []
+        plt.plot(mutation, auc, label=evaluators[i].type)
 
-if not os.path.exists('data/'):
-    os.makedirs('data/')
+    plt.legend(loc='lower right')
+    ax.set_xlabel('Mutation')
+    ax.set_ylabel('AUC')
+    plt.savefig('results/' + name + "_all_data.pdf")
+    plt.close()
 
-if not os.path.exists('results/'):
-    os.makedirs('results/')
+def plot_results_blind(evaluators, name):
 
-for dataset in datasets:
-    name = type(dataset).__name__
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
 
-    print("Loading %s data" % name)
-    dataset.load_data()
-    data_sizes.append({"n": len(dataset.data), "features": len(dataset.columns)})
+    for i in range(len(evaluators)):
+        mutation = []
+        auc = []
+
+        for key in evaluators[i].results_blind.keys():
+            mutation.append(key)
+
+            if i == 0:
+                auc.append(np.mean(evaluators[i].results_blind[key]['auc']))
+            else:
+                auc.append(float(evaluators[i].get_auc_result_blind(key).split(" ")[1]))
+
+        plt.plot(mutation, auc, label=evaluators[i].type)
+
+    plt.legend(loc='lower right')
+    ax.set_xlabel('Mutation')
+    ax.set_ylabel('AUC')
+    plt.savefig('results/' + name + "_blind.pdf")
+    plt.close()
+
+# (str(mutation_perc), evaluators)
+def write_results_all_data(results, filename):
+    # Open file and write header
+    # mutation % | alg name #1 
+    #     %      |     auc
+    f = open("results/" + filename + "_all_data.csv", "w")
+    f.write("Outlier %|Mutation %|")
+
+    t = ""
+    for i in results[0][0]:
+        t += i.type + "|"
+
+    t = t[:-1] + "\n"
+    f.write(t)
+
+    for res in results:
+        for key in res[0][0].results_all_data.keys():
+            line = res[1] + "|"
+            line += str(key) + "|"
+            for result in res[0]:
+                if type(result) == MultivariateDensity:
+                    line += "0: " + result.get_auc_result_all_data(key) + "|"
+                else:
+                    line += result.get_auc_result_all_data(key) + "|"
+                
+            f.write(line[:-1] + "\n")
+
+def write_results_blind(results, filename):
+    # Open file and write header
+    # mutation % | alg name #1 
+    #     %      |     auc
+    f = open("results/" + filename + "_blind.csv", "w")
+    f.write("Outlier %|Mutation %|")
+
+    t = ""
+    for i in results[0][0]:
+        t += i.type + "|"
+
+    t = t[:-1] + "\n"
+    f.write(t)
+
+    for res in results:
+        for key in res[0][0].results_blind.keys():
+            line = res[1] + "|"
+            line += str(key) + "|"
+            for result in res[0]:
+                if type(result) == MultivariateDensity:
+                    line += "0: " + result.get_auc_result_blind(key) + "|"
+                else:
+                    line += result.get_auc_result_blind(key) + "|"
+                
+            f.write(line[:-1] + "\n")
+
+if __name__=="__main__":
+
+    runs = 5
+    mutation_perc_min = 0.05 # 5% mutation
+    mutation_perc_max = 0.3 # 30% mutation
+    mutation_min = 1.0
+    mutation_max = 3.0
+    datasets = [QSARFishToxicity(),
+                GasEmission(),
+                AirQuality(),
+                CommunitiesAndCrime(),
+                Superconductivity(),
+                CTSliceAxial(),
+                Accelerometer(),
+                BiasCorrection(),
+                Cargo2000(),
+                Chickenpox(),
+                CNNPred(),
+                #HouseholdPowerConsumption(),
+                OnlineNewsPopularity(),
+                QueryAnalyticsWorkloads(),
+                WaveEnergyConverters(),
+                Synthetic(200, 1000000)] # 200 cols, 1million rows
+
+    dataset_descriptions = {
+        'Name' : [],
+        'Total records' : [],
+        'Total features' : [],
+        'Total outliers' : []
+    }
+
+    table1 = {
+        'Dataset mutation (*std)' : [],
+        'Area under ROC' : []
+    }
+
+    table2 = {
+        'Dataset mutation (*std)' : [],
+        'False Positives' : []
+    }
+
+    midx1 = []
+    midx2 = []
+
+    data_sizes = []
+
+    if not os.path.exists('data/'):
+        os.makedirs('data/')
+
+    if not os.path.exists('results/'):
+        os.makedirs('results/')
+
     
-    results = evaluate(dataset, runs, mutation)
+    for dataset in datasets:
+        name = type(dataset).__name__
 
-    all_results.append(results)
+        print("Loading %s data" % name)
+        dataset.load_data()
+        dataset.preprocess()
+        
+        results = []
 
-    # Dataset descriptions LaTeX table
-    dataset_descriptions['Name'].append(name)
-    dataset_descriptions['Total records'].append(len(dataset.data))
-    dataset_descriptions['Total features'].append(len(dataset.columns))
-    dataset_descriptions['Total outliers'].append(round(len(dataset.data)*mutation))
+        for mutation_perc in np.linspace(mutation_perc_min, mutation_perc_max, 10):
+            data_sizes.append({"n": len(dataset.data), "features": len(dataset.columns)})
+            
+            evaluators = evaluate(dataset, runs, mutation_perc, mutation_min, mutation_max)
 
-    for result in results:
-        for mut_amp in result.results.keys():
-            # Multivariate KDE section in T1
-            midx1.append((name, result.type))
-            table1['Dataset mutation (*std)'].append("%.1f" %mut_amp)
-            table1['Area under ROC'].append(result.get_auc_result(mut_amp))
+            # Dataset descriptions LaTeX table
+            dataset_descriptions['Name'].append(name)
+            dataset_descriptions['Total records'].append(len(dataset.data))
+            dataset_descriptions['Total features'].append(len(dataset.columns))
+            dataset_descriptions['Total outliers'].append(round(len(dataset.data)*mutation_perc))
 
-            # Multivariate KDE section in T2
-            midx2.append((name, result.type))
-            table2['Dataset mutation (*std)'].append("%.1f" %mut_amp)
-            table2['False Positives'].append("%.1f +- %.4f" % (np.mean(result.results[mut_amp]['all_tp']), np.std(result.results[mut_amp]['all_tp'])))
+            df0 = pd.DataFrame(dataset_descriptions)
 
-df0 = pd.DataFrame(dataset_descriptions)
-df1 = pd.DataFrame(table1, index=pd.MultiIndex.from_tuples(midx1, names=['Dataset', 'Method']))
-df2 = pd.DataFrame(table2, index=pd.MultiIndex.from_tuples(midx2, names=['Dataset', 'Method']))
+            with open('results/results' + str(mutation_perc) + '.txt', 'w') as writer:
+                writer.write(df0.to_latex(index=False))
+                writer.close()
 
+            plot_results_all_data(evaluators, name + "mutation_perc " + str(mutation_perc))
+            plot_results_blind(evaluators, name + "mutation_perc " + str(mutation_perc))
+            results.append( (evaluators, str(mutation_perc)) )
 
-with open('results/results.txt', 'w') as writer:
-    writer.write(df0.to_latex(index=False, caption='Dataset overview', label='datasetoverview'))
-    writer.write("")
-    writer.write(df1.to_latex(index=True, multirow = True, caption='Area under the ROC curve', label='table1'))
-    writer.write("")
-    writer.write(df2.to_latex(index=True, multirow = True, caption='False positives when detecting all outliers', label='table2'))
+        write_results_all_data(results, name)
+        write_results_blind(results, name)
 
-    writer.close()
-
-
-# Final performance chart
-#fig = plt.figure()
-#plt.title("Performance by method")
-#
-#seen_methods = []
-#
-## data set
-#for r in range(0, len(all_results)):
-#    # method
-#    for method in all_results[r]:
-#        if method.chartName == 'linear_regression':
-#            colour = 'blue'
-#        else:
-#            colour = 'orange'
-#
-#        if method.type not in seen_methods:
-#            label = method.type
-#            seen_methods.append(method.type)
-#        else:
-#            label = None
-#        
-#        plt.scatter(data_sizes[r]['n'], method.fith_p_tp[0], c=colour, label=label, marker=method.marker, s=data_sizes[r]['features']*10, edgecolor='black', alpha=0.5)
-#
-#plt.xlabel("Number of records")
-#plt.ylabel("Outliers detected")
-#plt.legend(loc='upper left')
-#fig.savefig("Results/performance.pdf")
+    print("Finished")

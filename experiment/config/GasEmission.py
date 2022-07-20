@@ -25,8 +25,8 @@ class GasEmission(DataSetBase):
 
             first = True
             with open('data/' + name + '.csv', 'w') as outfile:
-                for fname in filenames:
-                    with open('data/' + fname) as infile:
+                for f in filenames:
+                    with open('data/' + f) as infile:
                         firstline = True
                         for line in infile:
                             if firstline and first:
@@ -41,12 +41,16 @@ class GasEmission(DataSetBase):
                             
             print("Done. Cleaning up")
 
-            for f in filenames:
-                os.remove('data/' + f)
+            try:
+                for f in filenames:
+                    os.remove('data/' + f)
 
-            os.remove('data/' + fname)
+                os.remove('data/' + fname)
+            except:
+                pass # if it fails to remove the file, carry on.
 
         self.data = pd.read_csv("data/"+name+".csv", sep=',')
         self.columns = list(range(len(self.data.columns)))
 
         self.data.columns = self.columns
+        self.mutation_cols = list(self.columns)
