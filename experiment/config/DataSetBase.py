@@ -127,18 +127,11 @@ class DataSetBase:
             std_1 = np.std(sample[sample.columns[j]])
             std = mutation_amplitude*np.std(sample[sample.columns[j]])
 
-            #rands = random.uniform(mu-std, mu+std, len(sample))
             rands_1 = random.uniform(mu-std, mu-std_1, len(sample))
             rands_2 = random.uniform(mu+std_1, mu+std, len(sample))
             rands = np.concatenate((rands_1, rands_2), axis=0)
             rands = random.choice(rands, size=len(sample))
             
-#            for r in range(len(rands)):
-#                if (rands[r] > mu-std_1) & (rands[r] <= mu):
-#                    rands[r] = mu-std_1
-#                elif (rands[r] > mu) & (rands[r] <= mu+std_1):
-#                    rands[r] = mu+std_1
-
             sample.iloc[:, j] = rands
 
         self.data.loc[sample.index] = sample

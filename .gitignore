@@ -4,3 +4,4 @@ __pycache*
 *.zip
 Results/*
 debug.log
+*.pdf

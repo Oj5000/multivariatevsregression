@@ -1,0 +1,27 @@
+\begin{tabular}{lrrr}
+\toprule
+     Name &  Total records &  Total features &  Total outliers \\
+\midrule
+Synthetic &          10000 &              10 &             500 \\
+Synthetic &          10000 &              10 &             778 \\
+Synthetic &          10000 &              10 &            1056 \\
+Synthetic &          10000 &              10 &            1333 \\
+Synthetic &          10000 &              10 &            1611 \\
+Synthetic &          10000 &              10 &            1889 \\
+Synthetic &          10000 &              10 &            2167 \\
+Synthetic &          10000 &              10 &            2444 \\
+Synthetic &          10000 &              10 &            2722 \\
+Synthetic &          10000 &              10 &            3000 \\
+Synthetic &          10000 &              50 &             500 \\
+Synthetic &          10000 &              50 &             778 \\
+Synthetic &          10000 &              50 &            1056 \\
+Synthetic &          10000 &              50 &            1333 \\
+Synthetic &          10000 &              50 &            1611 \\
+Synthetic &          10000 &              50 &            1889 \\
+Synthetic &          10000 &              50 &            2167 \\
+Synthetic &          10000 &              50 &            2444 \\
+Synthetic &          10000 &              50 &            2722 \\
+Synthetic &          10000 &              50 &            3000 \\
+Synthetic &          10000 &              99 &             500 \\
+\bottomrule
+\end{tabular}

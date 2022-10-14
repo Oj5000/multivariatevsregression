@@ -19,4 +19,4 @@ class Synthetic(DataSetBase):
             self.data[cols[x]] = s
 
         self.columns = self.data.columns
-        self.mutation_cols = self.data.columns
+        self.mutation_cols = list(self.data.columns)

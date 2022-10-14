@@ -2,14 +2,19 @@ import pandas as pd
 import numpy as np
 import math
 
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore",category=FutureWarning)
+
 from sklearn import metrics
 
+from evaluators.MultivariateDensity2 import MultivariateDensity2
 from evaluators.MultivariateDensity import MultivariateDensity
 from evaluators.LinearEvaluator import LinearEvaluator
 
 def evaluate(dataset, runs, mutation, mutation_min, mutation_max):
     evaluators = [
-        MultivariateDensity(),
+        MultivariateDensity2(),
         LinearEvaluator(dataset.columns, 1, 0),
         LinearEvaluator(dataset.columns, 1, 1),
         LinearEvaluator(dataset.columns, 1, 2),
@@ -25,13 +30,13 @@ def evaluate(dataset, runs, mutation, mutation_min, mutation_max):
             sample_idx, data = dataset.mutate(mutation, mutation_amplitude)
 
             for evaluator in evaluators:
-                print("      Running " + evaluator.type)
+                #print("      Running " + evaluator.type)
 
                 # All results
                 errors = evaluator.fitpredict(data)
-                auc, all_tp = get_results(errors, sample_idx)
-                print("Results mutation_amplitude: %s, auc: %s, all_tp: %s" % (str(mutation_amplitude), str(np.max(auc)), str(np.max(all_tp))))
-                evaluator.addResults_all_data(mutation_amplitude, auc, all_tp)
+                f1, all_tp = get_results(errors, sample_idx)
+                #print("Results mutation_amplitude: %s, f1: %s, all_tp: %s" % (str(mutation_amplitude), str(f1.max()), str(all_tp.max())))
+                evaluator.addResults_all_data(mutation_amplitude, f1, all_tp)
 
                 # Blind
                 # split data into train and test
@@ -42,9 +47,9 @@ def evaluate(dataset, runs, mutation, mutation_min, mutation_max):
                 errors_gen = evaluator.fitpredict(training)
                 errors = evaluator.predict(testing)
 
-                auc, all_tp = get_results(errors, sample_idx)
-                print("Results mutation_amplitude: %s, auc: %s, all_tp: %s" % (str(mutation_amplitude), str(np.max(auc)), str(np.max(all_tp))))
-                evaluator.addResults_blind(mutation_amplitude, auc, all_tp)
+                f1, all_tp = get_results(errors, sample_idx)
+                #print("Results mutation_amplitude: %s, f1: %s, all_tp: %s" % (str(mutation_amplitude), str(f1.max()), str(all_tp.max())))
+                evaluator.addResults_blind(mutation_amplitude, f1, all_tp)
 
             dataset.restore()
 
@@ -52,68 +57,53 @@ def evaluate(dataset, runs, mutation, mutation_min, mutation_max):
 
 def get_results(errors, sample_idx):
     Npoints = 100
-    thRange = np.linspace(np.min(np.abs(errors)), np.max(np.abs(errors)), Npoints)
 
     npos = len(sample_idx)
-    nneg = len(errors) - npos
-
-    all_tp = None
 
     if errors.shape[1] > 1:
-        all_tp = np.zeros(errors.shape[1])
-
-        for i in range(len(all_tp)):
-            all_tp[i] = 1e9
-
-        tpr = pd.DataFrame(columns=errors.columns)
-        fpr = pd.DataFrame(columns=errors.columns)
+        thRange = np.linspace(np.min(np.abs(errors),axis=0), np.max(np.abs(errors),axis=0), Npoints)
+        all_tp = pd.DataFrame([np.full(len(errors.columns),1e9)], columns=errors.columns)
+        f1 = pd.DataFrame(columns=errors.columns)
 
         # Regression
         for i in range(Npoints):
             results = (np.abs(errors) >= thRange[i])
 
             tp = results.loc[sample_idx].sum()
-            fp = results.sum() - tp
+            fp = np.sum(results) - tp
+            fn = npos - tp
 
-            tp_r = tp / npos
-            fp_r = fp / nneg
+            f = get_f1(tp, fp, fn)
+            f1 = pd.concat([f1, pd.DataFrame([f], columns=errors.columns)], ignore_index=True)
 
-            #tpr = tpr.append(pd.DataFrame([tp_r], columns=errors.columns))
-            #fpr = fpr.append(pd.DataFrame([fp_r], columns=errors.columns))
-            tpr = pd.concat([tpr, pd.DataFrame([tp_r], columns=errors.columns)], ignore_index=True)
-            fpr = pd.concat([fpr, pd.DataFrame([fp_r], columns=errors.columns)], ignore_index=True)
+            for c in errors.columns:
+                if fp[c] < all_tp[c].values[0] and tp[c] == len(sample_idx):
+                    all_tp[c].iloc[0] = fp[c]
 
-            for i in range(len(tp_r.values)):
-                if tp_r.values[i] == 1:
-                    if fp.values[i] < all_tp[i]:
-                        all_tp[i] = fp_r.values[i] * nneg
-
-        auc = []
-
-        for i in range(len(errors.columns)):
-            auc.append(metrics.auc(fpr.iloc[:,i].values, tpr.iloc[:,i].values))
+        best_f = f1.max()
     else:
-        all_tp = 1e9
-        tpr = []
-        fpr = []
+        thRange = np.linspace(np.min(errors,axis=0), np.max(errors,axis=0), Npoints)
 
         # density
+        best_f = 0
+        all_tp = 1e9
+
         for i in range(Npoints):
-            results = (np.abs(errors) >= thRange[i])
+            results = (errors <= thRange[i]) # High likelihood = Highly likely to be part of the training data & NOT an outlier = True negative
 
             tp = results.loc[sample_idx].sum().values[0]
-            fp = results.sum().values[0] - tp
+            fp = np.sum(results).values[0] - tp
+            fn = npos - tp
 
-            tp_r = (tp / npos)
-            fp_r = (fp / nneg)
+            f1 = get_f1(tp, fp, fn)
 
-            if tp_r == 1:
-                if fp < all_tp:
-                    all_tp = fp
+            if f1 > best_f:
+                best_f = f1
 
-            tpr.append(tp_r)
-            fpr.append(fp_r)
+            if fp < all_tp and tp == len(sample_idx):
+                all_tp = fp
 
-        auc = metrics.auc(fpr, tpr)
+    return best_f, all_tp
 
-    return auc, all_tp
+def get_f1(tp, fp, fn):
+    return tp / (tp + 0.5*(fp + fn))
